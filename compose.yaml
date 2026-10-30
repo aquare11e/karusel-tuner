@@ -1,0 +1,44 @@
+name: karusel-plex-relay
+
+services:
+  vpn:
+    image: qmcgaw/gluetun:latest
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./vpn:/gluetun/vpn:ro
+    environment:
+      VPN_SERVICE_PROVIDER: custom
+      VPN_TYPE: openvpn
+      OPENVPN_CUSTOM_CONFIG: /gluetun/vpn/client.ovpn
+      # Empty values are suitable for certificate-based VPN profiles.
+      OPENVPN_USER: ${OPENVPN_USER:-}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD:-}
+      FIREWALL_INPUT_PORTS: '8080'
+    ports:
+      # Default: only the Linux host can reach the relay.
+      - '127.0.0.1:${RELAY_PORT:-18080}:8080'
+    restart: unless-stopped
+
+  relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: 'service:vpn'
+    depends_on:
+      vpn:
+        condition: service_started
+    environment:
+      LISTEN_ADDR: ':8080'
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://127.0.0.1:18080}
+      SOURCE_URL: ${SOURCE_URL:-https://player.mediavitrina.ru/karusel/carusel/ao___karusel____web/67ad9799d21cf/player.html}
+      MAX_VIEWERS: ${MAX_VIEWERS:-2}
+      STARTUP_TIMEOUT: ${STARTUP_TIMEOUT:-45s}
+      RECONNECT_WINDOW: ${RECONNECT_WINDOW:-5m}
+      EPG_SOURCE_URL: ${EPG_SOURCE_URL:-https://www.karusel-tv.ru/schedule/Europe/Moscow}
+      EPG_REFRESH: ${EPG_REFRESH:-6h}
+      EPG_DAYS: ${EPG_DAYS:-12}
+    restart: unless-stopped
+    # No ports: relay and vpn share one network namespace.

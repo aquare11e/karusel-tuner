@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+vpn/
+threadfin-data/
+*.ts
+*.zip
+scripts/
+docs/
+AGENTS.md
+README.md
+Makefile

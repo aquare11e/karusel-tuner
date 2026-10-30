@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+vpn/*
+!vpn/README.md
+threadfin-data/
+*.ts
+*.log
+.coverage/
+coverage.out
+bin/
+.DS_Store
+plex-local-data/
+# Internal planning documents (kept local)
+docs/superpowers/

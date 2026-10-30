@@ -1,0 +1,31 @@
+# Local end-to-end test only (e.g. macOS + Docker Desktop):
+#   docker compose -f compose.yaml -f compose.local-plex.yaml up -d --build
+# or: make local-up
+#
+# Plex joins the project's default network and reaches the relay by the
+# service name of the VPN namespace (vpn:8080). Plex itself is NOT inside the
+# VPN namespace. Production Plex (Linux, network_mode: host) uses
+# http://127.0.0.1:18080 instead and needs none of this file.
+services:
+  relay:
+    environment:
+      PUBLIC_BASE_URL: http://vpn:8080
+
+  plex:
+    # Unpinned on purpose: this overlay is a throwaway local test bench.
+    image: plexinc/pms-docker:latest
+    ports:
+      - '127.0.0.1:32400:32400'
+    environment:
+      TZ: Europe/Moscow
+      # Claim token from https://plex.tv/claim (valid 4 minutes); keep it in .env only.
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+    volumes:
+      - plex-local-config:/config
+      - plex-local-transcode:/transcode
+      - ./plex-local-data:/data
+    restart: unless-stopped
+
+volumes:
+  plex-local-config:
+  plex-local-transcode:
