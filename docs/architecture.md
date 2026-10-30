@@ -3,6 +3,10 @@
 ## Data flow
 
 ```text
+OPENVPN_CONFIG_BASE64 (or ./vpn/client.ovpn)
+    -> vpn-config (one-shot vpnconf): decode, resolve `remote` host names to IPv4
+    -> vpn-config volume -> Gluetun OpenVPN tunnel
+
 MediaVitrina player page (SOURCE_URL)
     -> Go relay resolves the plain-HLS playlist via the player's streams API
     -> Streamlink CLI subprocess plays hls://<playlist> best
@@ -19,6 +23,8 @@ karusel-tv.ru schedule JSON
 The relay container uses `network_mode: service:vpn`, so every network request it makes — the player page, the streams API, Streamlink's HLS traffic and schedule downloads — leaves through the Gluetun OpenVPN tunnel.
 
 **VPN scope:** only the relay is inside the VPN namespace. Plex and the host keep their ordinary routes. Verified 2026-10-30: the relay's egress was in Russia while the host's egress stayed in its own country.
+
+**VPN profile:** Gluetun's custom provider reads a file and rejects host names in `remote` (`host is not an IP address`); its firewall also blocks DNS before the tunnel is up. The one-shot `vpn-config` service therefore runs before `vpn` (`depends_on: service_completed_successfully`): it takes the profile from `OPENVPN_CONFIG_BASE64` (fallback `./vpn/client.ovpn`), replaces host names in `remote` with their first IPv4 address using ordinary DNS, and atomically writes an owner-only file to the `vpn-config` volume. A dynamic-DNS address is thus re-resolved on every deploy (`docker compose up`, Portainer redeploy); a plain container restart reuses the last file. Only self-contained profiles work: certificates and keys must be inline (`<ca>`, `<cert>`, `<key>`). VPN login and password stay plain environment variables Gluetun reads itself. The profile and password are visible to anyone who can inspect the containers or the Portainer stack.
 
 **Plex ingress:** Plex talks to the relay at `PUBLIC_BASE_URL` (`/discover.json`, `/lineup.json`, `/live.ts`, `/epg.xml`). `127.0.0.1` is reachable only for Plex on the Linux host itself or with host networking; a bridged Plex container needs an address it can reach — see the deployment docs.
 
@@ -77,16 +83,16 @@ Signals from the streams API that the relay turns into errors (HTTP 502 on `/liv
 Verified on 2026-10-30 unless marked otherwise.
 
 - Docker Engine + Compose v2 with TUN. Linux is the production target; Docker Desktop on macOS also runs the stack (TUN exists inside its VM, not as `/dev/net/tun` on the host).
-- Gluetun's custom OpenVPN provider requires an IP literal in `remote`; a hostname fails with `host is not an IP address`. A profile that points at a dynamic-DNS name must be re-resolved whenever that address changes.
+- Gluetun's custom OpenVPN provider requires an IP literal in `remote`; `vpnconf` resolves host names on every deploy (see VPN profile above).
 - The VPN egress must be in Russia (`allowed_countries: ["RU"]` in the player config).
 - Resource use: Gluetun about 40 MiB; relay about 16 MiB idle and about 60 MiB with one viewer (Streamlink about 67 MB RSS).
 - Not yet verified: whether the web stream shows «Спокойной ночи, малыши!» at 21:00 MSK or a rights placeholder; recording through Plex end to end.
-- Go 1.23+ for local test/build. The Docker image builds with Go 1.23 bookworm.
+- Go 1.23+ for local test/build. The Docker image builds with Go 1.23 bookworm; CI publishes `ghcr.io/aquare11e/karusel-tuner` for linux/amd64 and linux/arm64.
 
 ## Privacy and security
 
 - Bind the local port to `127.0.0.1` unless explicitly approved for a trusted LAN.
 - Never log cookies, signed HLS URLs, passwords, profile contents or auth token responses. Resolver errors omit URLs. Streamlink's stderr passes through a line filter that strips URL query strings (`?<redacted>`), where the playlist tokens live; scheme, host and path stay for diagnosis. The resolved playlist URL is still visible in the Streamlink process arguments (`ps`, `/proc/*/cmdline`) to users of the Docker host while it runs; tokens are short-lived, but treat host shell access accordingly.
-- `.env`, `vpn/*` excluded by git and `.dockerignore`.
+- `.env`, `vpn/*` excluded by git and `.dockerignore`. `vpnconf` never logs the profile, the `remote` host or the resolved address.
 - Gluetun firewall is kept enabled for kill-switch behavior (outbound policy DROP; only loopback, the Docker subnet, the VPN server and `tun0` are allowed). Do not introduce a fallback to plain network routing.
 - The project is for personal/local use where the user has rights; no DRM bypass, exposed public rebroadcast or credentials harvesting.

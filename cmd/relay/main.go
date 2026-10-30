@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"example.com/karusel-plex-relay/internal/epg"
-	"example.com/karusel-plex-relay/internal/relay"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/relay"
 )
 
 func main() {

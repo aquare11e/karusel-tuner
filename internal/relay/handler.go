@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"example.com/karusel-plex-relay/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
 )
 
 // GuideSource is the cached programme guide served to Plex.

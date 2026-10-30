@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"example.com/karusel-plex-relay/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
 )
 
 func newTunerServer(t *testing.T) *httptest.Server {
@@ -44,7 +44,7 @@ func TestDiscoverJSON(t *testing.T) {
 		TunerCount                                                                          int
 	}
 	getJSON(t, newTunerServer(t), "/discover.json", &d)
-	if d.FriendlyName != "Karusel Relay" || d.Manufacturer != "Silicondust" || d.ModelNumber != "HDTC-2US" ||
+	if d.FriendlyName != "Karusel Tuner" || d.Manufacturer != "Silicondust" || d.ModelNumber != "HDTC-2US" ||
 		d.FirmwareName != "hdhomeruntc_atsc" || d.DeviceID != "4B415258" {
 		t.Errorf("device identity = %+v", d)
 	}

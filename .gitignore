@@ -13,3 +13,5 @@ bin/
 plex-local-data/
 # Internal planning documents (kept local)
 docs/superpowers/
+# AI agent start prompt (kept local)
+CODEX_PROMPT.md

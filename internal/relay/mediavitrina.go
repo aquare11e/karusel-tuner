@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"example.com/karusel-plex-relay/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
 )
 
 // The MediaVitrina player no longer embeds the playlist URL that Streamlink's

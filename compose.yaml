@@ -1,6 +1,22 @@
-name: karusel-plex-relay
+name: karusel-tuner
 
 services:
+  # One-shot: writes the OpenVPN profile for Gluetun into the vpn-config
+  # volume. Takes OPENVPN_CONFIG_BASE64, or ./vpn/client.ovpn when it is
+  # empty, and resolves `remote` host names to IPv4 (Gluetun needs IPs).
+  vpn-config:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: karusel-tuner:local
+    command: ['/usr/local/bin/vpnconf']
+    environment:
+      OPENVPN_CONFIG_BASE64: ${OPENVPN_CONFIG_BASE64:-}
+    volumes:
+      - ./vpn:/vpn:ro
+      - vpn-config:/vpn-config
+    restart: 'no'
+
   vpn:
     image: qmcgaw/gluetun:latest
     cap_add:
@@ -8,7 +24,7 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     volumes:
-      - ./vpn:/gluetun/vpn:ro
+      - vpn-config:/gluetun/vpn:ro
     environment:
       VPN_SERVICE_PROVIDER: custom
       VPN_TYPE: openvpn
@@ -20,12 +36,16 @@ services:
     ports:
       # Default: only the Linux host can reach the relay.
       - '127.0.0.1:${RELAY_PORT:-18080}:8080'
+    depends_on:
+      vpn-config:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   relay:
     build:
       context: .
       dockerfile: Dockerfile
+    image: karusel-tuner:local
     network_mode: 'service:vpn'
     depends_on:
       vpn:
@@ -42,3 +62,6 @@ services:
       EPG_DAYS: ${EPG_DAYS:-12}
     restart: unless-stopped
     # No ports: relay and vpn share one network namespace.
+
+volumes:
+  vpn-config:

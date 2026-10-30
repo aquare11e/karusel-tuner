@@ -16,7 +16,7 @@ import (
 // depending on tzdata inside the container.
 var Moscow = time.FixedZone("MSK", 3*60*60)
 
-const UserAgent = "karusel-plex-relay/1 (personal use)"
+const UserAgent = "karusel-tuner/1 (personal use)"
 
 // maxScheduleBytes bounds one day's response; real days are ~20 KB.
 const maxScheduleBytes = 1 << 20

@@ -9,11 +9,16 @@ docker compose version >/dev/null || { echo 'ERROR: Docker Compose v2 is require
 if [[ "$(uname -s)" == Linux ]]; then
     [[ -c /dev/net/tun ]] || { echo 'ERROR: /dev/net/tun not found (enable TUN device)' >&2; exit 1; }
 fi
-[[ -s vpn/client.ovpn ]] || { echo 'ERROR: copy your OpenVPN profile to vpn/client.ovpn' >&2; exit 1; }
 if [[ ! -f .env ]]; then
     cp .env.example .env
     chmod 600 .env
-    echo 'Created .env from example. Review its settings and re-run this script.' >&2
+    echo 'Created .env from example. Set OPENVPN_CONFIG_BASE64 (or put vpn/client.ovpn) and re-run this script.' >&2
+    exit 1
+fi
+# The profile comes from OPENVPN_CONFIG_BASE64 in .env (checked without
+# sourcing secrets) or, when that is empty, from vpn/client.ovpn.
+if ! grep -qE '^OPENVPN_CONFIG_BASE64=.+' .env && [[ ! -s vpn/client.ovpn ]]; then
+    echo 'ERROR: set OPENVPN_CONFIG_BASE64 in .env or copy your OpenVPN profile to vpn/client.ovpn' >&2
     exit 1
 fi
 

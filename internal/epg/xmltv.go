@@ -57,7 +57,7 @@ type xmlProgramme struct {
 func WriteXMLTV(w io.Writer, siteURL string, progs []Programme) error {
 	base, _ := url.Parse(siteURL)
 	doc := xmlTV{
-		Generator: "karusel-plex-relay",
+		Generator: "karusel-tuner",
 		Channel:   xmlChannel{ID: ChannelID, DisplayNames: []string{ChannelName, ChannelID}},
 	}
 	for _, p := range progs {

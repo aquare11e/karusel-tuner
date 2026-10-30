@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"example.com/karusel-plex-relay/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
 )
 
 // deviceID must stay stable across restarts; a new ID looks like a new
@@ -28,7 +28,7 @@ func (h *Handler) discover(w http.ResponseWriter, _ *http.Request) {
 		LineupURL       string
 		TunerCount      int
 	}{
-		FriendlyName:    "Karusel Relay",
+		FriendlyName:    "Karusel Tuner",
 		Manufacturer:    "Silicondust",
 		ModelNumber:     "HDTC-2US",
 		FirmwareName:    "hdhomeruntc_atsc",

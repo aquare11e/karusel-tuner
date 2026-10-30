@@ -4,10 +4,12 @@ Work from the network tunnel to the consumer. No real VPN profile is included in
 
 | Symptom | Check | Typical cause / next step |
 | --- | --- | --- |
-| `vpn/client.ovpn` missing | `ls -l vpn/client.ovpn` | Supply your own valid profile; don't commit it |
+| `vpn` never starts; `vpn-config` exited with an error | `docker compose logs vpn-config` | `no VPN profile`: set `OPENVPN_CONFIG_BASE64` (or provide `vpn/client.ovpn`); `not valid base64`: re-encode on one line (`base64 -i` / `base64 -w0`); `profile has no remote line`: wrong file; `remote on line N: cannot resolve host`: DNS of the Docker host cannot resolve the VPN server name |
 | No `/dev/net/tun` | `ls -l /dev/net/tun` | Docker host/VPS lacks TUN device access |
 | Gluetun retries connection | `docker compose logs --tail=150 vpn` | Wrong `remote`, TLS/auth issues, CA file path, unreachable VPN server |
-| Gluetun: "host is not an IP address" | Inspect profile's `remote` | Gluetun needs an IP in `remote`; resolve the provider's (DDNS) name beforehand and update when it changes |
+| Gluetun: "host is not an IP address" | `docker compose logs vpn-config` | The profile did not go through `vpn-config` (old compose file or volume mounted by hand); deploy with the current `compose.yaml` / `compose.portainer.yaml` |
+| VPN worked, stopped after the server's IP changed | `docker compose logs vpn` | Redeploy (`make deploy` / Portainer «Update the stack»): `vpn-config` resolves the DDNS name again; a plain restart reuses the old address |
+| Portainer cannot pull `ghcr.io/aquare11e/karusel-tuner` | Portainer stack logs | Image not built yet (see the repository's Actions) or the GHCR package is private: make it public or add GHCR credentials in Portainer |
 | `curl healthz` OK, Plex black screen | `make smoke-video`, relay logs | Liveness is not readiness; source/VPN/player may be offline |
 | Log: `upstream returned no video: resolve MediaVitrina stream: streams API URL not found in player page (player changed?)` | `docker compose logs --tail=100 relay` | The MediaVitrina player page changed; verify the official player URL and update `SOURCE_URL` or the resolver |
 | Log: `... no unprotected HLS stream offered for country "XX" (DRM formats are not supported)` | relay logs | Only DRM variants are offered for this egress; the project does not bypass DRM |

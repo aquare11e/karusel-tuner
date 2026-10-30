@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"example.com/karusel-plex-relay/internal/epg"
+	"github.com/aquare11e/karusel-tuner/internal/epg"
 )
 
 type fakeGuide struct {

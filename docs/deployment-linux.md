@@ -4,9 +4,8 @@
 
 - Docker Engine with Docker Compose v2: `docker compose version`.
 - `/dev/net/tun` exists: `test -c /dev/net/tun && echo OK`.
-- A valid `.ovpn` profile and any separate CA/client files, in `vpn/`.
-- The profile's `remote` must be an **IP address**: Gluetun rejects host names ("host is not an IP address"), and its firewall blocks DNS before the tunnel is up. For a DDNS name, resolve it to an IP beforehand and update the profile when the address changes.
-- `vpn/` is mounted read-only as a directory. To keep the profile elsewhere, replace that mount in a local override (`volumes: !override`); adding a single-file mount inside the read-only directory fails with "read-only file system".
+- A self-contained `.ovpn` profile (certificates and keys inline) in `.env` as `OPENVPN_CONFIG_BASE64` (`base64 -w0 client.ovpn`), or as `vpn/client.ovpn`. Login and password, if any, in `OPENVPN_USER`/`OPENVPN_PASSWORD`.
+- Host names in `remote` (e.g. a DDNS name) are fine: the one-shot `vpn-config` service resolves them to IPv4 on every deploy, because Gluetun accepts only IP addresses there.
 - Local firewall: do not expose ports without intention.
 - Enough bandwidth (the stream is ≈ 7 Mbit/s) and authorization for personal viewing. The code does not circumvent DRM.
 
@@ -17,8 +16,8 @@ Plex runs in Docker with `network_mode: host` (or natively) on the same host and
 ```bash
 cp .env.example .env
 chmod 600 .env
-cp /secure/path/client.ovpn vpn/client.ovpn
-# Edit .env: OPENVPN_USER/PASSWORD if necessary, do not commit
+# Edit .env: OPENVPN_CONFIG_BASE64=<output of: base64 -w0 /secure/path/client.ovpn>
+#            OPENVPN_USER/PASSWORD if necessary. Do not commit .env.
 make deploy
 ```
 
@@ -27,7 +26,8 @@ If `deploy.sh` creates `.env` itself, it exits after copying for manual review; 
 Validate in order:
 
 ```bash
-docker compose ps
+docker compose ps -a              # vpn-config: Exited (0); vpn: healthy; relay: Up
+docker compose logs vpn-config    # "profile from OPENVPN_CONFIG_BASE64 written ..."
 docker compose logs --tail=80 vpn
 bash scripts/smoke.sh   # healthz, status, playlist, discover/lineup, /epg.xml
 make smoke-video        # ~20 s of video + ffprobe (host or relay container)
@@ -58,6 +58,24 @@ The safe default is loopback only. If **necessary**, change:
 
 Then in `.env` set `PUBLIC_BASE_URL=http://192.168.1.10:18080` (Plex follows the lineup URLs, so they must be reachable from it). Apply a firewall rule that permits **only your trusted local subnet**; never publish it on a public IP or router. Anyone with LAN access can then start upstream jobs within the tuner limit; add authentication if the LAN is untrusted.
 
+## Portainer
+
+`compose.portainer.yaml` runs the same stack from the published image `ghcr.io/aquare11e/karusel-tuner` (linux/amd64, linux/arm64), so the server needs neither Git nor Go. Create a stack from the repository (compose path `compose.portainer.yaml`) or paste the file into the web editor, and set `OPENVPN_CONFIG_BASE64` (required), `OPENVPN_USER` and `OPENVPN_PASSWORD` as stack environment variables. Step-by-step instructions are in the README (in Russian).
+
+## Upgrading from karusel-plex-relay
+
+The project was renamed: the Compose project is now `karusel-tuner`, so containers get new names and the old ones are not reused.
+
+```bash
+# in the old checkout, stop the old project (volumes stay)
+docker compose -p karusel-plex-relay down
+# new checkout: move the profile into .env (or keep vpn/client.ovpn as the fallback)
+echo "OPENVPN_CONFIG_BASE64=$(base64 -w0 vpn/client.ovpn)" >> .env
+make deploy
+```
+
+The HDHomeRun `DeviceID` is unchanged, so the tuner in Plex keeps working at the same address; only its display name changes to «Karusel Tuner». Volumes of the old local Plex bench (`karusel-plex-relay_plex-local-*`) are not reused by the new project name.
+
 ## Upgrading from the Threadfin setup
 
 Earlier versions shipped an optional Threadfin profile. It is gone: the relay is now the tuner. Skip this section if Threadfin was never started (`docker volume ls | grep threadfin` shows nothing).
@@ -85,7 +103,7 @@ make deploy   # rebuild and restart
 
 `make check` needs Go and is meant for the development machine, not for the server.
 
-Keep `vpn/client.ovpn` and `.env` backed up securely. Docker may require `sudo` depending on group configuration.
+Keep `.env` (and `vpn/client.ovpn`, if used) backed up securely. Docker may require `sudo` depending on group configuration.
 
 ## Rollback / stop
 
