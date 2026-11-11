@@ -7,10 +7,13 @@
 #   OPENVPN_USER           VPN login, if the profile uses auth-user-pass
 #   OPENVPN_PASSWORD       VPN password, if the profile uses auth-user-pass
 #
-# Optional: RELAY_PORT, PUBLIC_BASE_URL, MAX_VIEWERS, STARTUP_TIMEOUT,
-# RECONNECT_WINDOW, SOURCE_URL, EPG_SOURCE_URL, EPG_REFRESH, EPG_DAYS.
-# The relay listens on 127.0.0.1 of the Docker host only: suitable for Plex on
-# the same host with host networking. See README before exposing it to a LAN.
+# Optional: RELAY_PORT, RELAY_EXTRA_IP, PUBLIC_BASE_URL, MAX_VIEWERS,
+# STARTUP_TIMEOUT, RECONNECT_WINDOW, SOURCE_URL, EPG_SOURCE_URL, EPG_REFRESH,
+# EPG_DAYS.
+# The relay listens on 127.0.0.1 of the Docker host: suitable for Plex on the
+# same host with host networking. RELAY_EXTRA_IP publishes the same port on one
+# more host address, e.g. the docker0 gateway for clients in other Docker
+# networks (host.docker.internal). See README before exposing it to a LAN.
 services:
   # One-shot: writes the profile into the vpn-config volume, resolving
   # `remote` host names to IPv4 on every stack (re)deploy.
@@ -40,6 +43,8 @@ services:
       FIREWALL_INPUT_PORTS: '8080'
     ports:
       - '127.0.0.1:${RELAY_PORT:-18080}:8080'
+      # Unset, this repeats the line above and Compose merges the two.
+      - '${RELAY_EXTRA_IP:-127.0.0.1}:${RELAY_PORT:-18080}:8080'
     depends_on:
       vpn-config:
         condition: service_completed_successfully
