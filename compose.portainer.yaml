@@ -18,7 +18,9 @@ services:
   # One-shot: writes the profile into the vpn-config volume, resolving
   # `remote` host names to IPv4 on every stack (re)deploy.
   vpn-config:
-    image: ghcr.io/aquare11e/karusel-tuner:latest
+    # Pinned images: update deliberately (new tag and digest here, then
+    # redeploy). CI tags every main build as sha-<commit>.
+    image: ghcr.io/aquare11e/karusel-tuner:sha-f5241b4@sha256:6004732dbc6fce8105f1ff9c3ccfaa705a24294311420c482c33b7717a45b447
     command: ['/usr/local/bin/vpnconf']
     environment:
       OPENVPN_CONFIG_BASE64: ${OPENVPN_CONFIG_BASE64:?set OPENVPN_CONFIG_BASE64 to the base64 of your .ovpn file}
@@ -27,7 +29,7 @@ services:
     restart: 'no'
 
   vpn:
-    image: qmcgaw/gluetun:latest
+    image: qmcgaw/gluetun:v3.41.3
     cap_add:
       - NET_ADMIN
     devices:
@@ -51,7 +53,7 @@ services:
     restart: unless-stopped
 
   relay:
-    image: ghcr.io/aquare11e/karusel-tuner:latest
+    image: ghcr.io/aquare11e/karusel-tuner:sha-f5241b4@sha256:6004732dbc6fce8105f1ff9c3ccfaa705a24294311420c482c33b7717a45b447
     network_mode: 'service:vpn'
     depends_on:
       vpn:
